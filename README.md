@@ -1,4 +1,5 @@
 # @uniswap/merkle-distributor with SafeERC & test coverage
+Forked from https://github.com/Uniswap/merkle-distributor
 ## Installation:
 ### Hardhat
 ```bash
