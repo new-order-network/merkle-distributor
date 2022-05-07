@@ -3,22 +3,22 @@ pragma solidity =0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 //import "./MerkleProof.sol";
 import "./MerkleProof.sol";
 import "./interfaces/IMerkleDistributor.sol";
 
-contract MerkleDistributor is IMerkleDistributor {
+contract MerkleDistributor is IMerkleDistributor, Ownable {
     address public immutable override token;
-    bytes32 public immutable override merkleRoot;
-    using SafeERC20 for IERC20;
-
+    bytes32 public override merkleRoot;
 
     // This is a packed array of booleans.
     mapping(uint256 => uint256) private claimedBitMap;
 
-    constructor(address token_, bytes32 merkleRoot_) public {
+    constructor(address token_, bytes32 merkleRoot_, address owner_) {
         token = token_;
         merkleRoot = merkleRoot_;
+        transferOwnership(owner_);
     }
 
     function isClaimed(uint256 index) public view override returns (bool) {
@@ -48,5 +48,22 @@ contract MerkleDistributor is IMerkleDistributor {
         SafeERC20.safeTransfer(IERC20(token), account, amount);
 
         emit Claimed(index, account, amount);
+    }
+
+    function updateMerkleRoot(bytes32 newMerkleRoot) onlyOwner public {
+        emit UpdateMerkleRoot(msg.sender, merkleRoot, newMerkleRoot);
+        merkleRoot = newMerkleRoot;
+    }
+
+    function withdrawToken(address to, uint amount) onlyOwner public {
+        require(to != address(0), "to address is the zero address");
+        require(amount > 0, "Amount is zero");
+        require(IERC20(token).balanceOf(address(this)) >= amount, "Amount exceeds balance");
+        SafeERC20.safeTransfer(IERC20(token), to, amount);
+        emit WithdrawToken(msg.sender, to, amount);
+    }
+
+    function withdrawAllTokens(address to) onlyOwner public {
+        withdrawToken(to, IERC20(token).balanceOf(address(this)));
     }
 }

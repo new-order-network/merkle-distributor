@@ -13,6 +13,10 @@ import * as Contracts from ".";
 declare module "hardhat/types/runtime" {
   interface HardhatEthersHelpers extends HardhatEthersHelpersBase {
     getContractFactory(
+      name: "Ownable",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Ownable__factory>;
+    getContractFactory(
       name: "ERC20",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ERC20__factory>;
@@ -36,10 +40,6 @@ declare module "hardhat/types/runtime" {
       name: "MerkleDistributor",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.MerkleDistributor__factory>;
-    getContractFactory(
-      name: "MerkleProof",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.MerkleProof__factory>;
     getContractFactory(
       name: "TestERC20",
       signerOrOptions?: ethers.Signer | FactoryOptions

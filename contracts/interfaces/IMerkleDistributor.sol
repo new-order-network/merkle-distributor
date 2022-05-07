@@ -14,4 +14,8 @@ interface IMerkleDistributor {
 
     // This event is triggered whenever a call to #claim succeeds.
     event Claimed(uint256 index, address account, uint256 amount);
+    // This event is triggered whenever a call to update merkle root succeeds.
+    event UpdateMerkleRoot(address indexed owner, bytes32 previousRoot, bytes32 newRoot);
+    // This event is triggered whenever a call to withdraw token succeeds.
+    event WithdrawToken(address indexed owner, address indexed to, uint amount);
 }
