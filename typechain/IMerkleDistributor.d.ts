@@ -48,9 +48,13 @@ interface IMerkleDistributorInterface extends ethers.utils.Interface {
 
   events: {
     "Claimed(uint256,address,uint256)": EventFragment;
+    "UpdateMerkleRoot(address,bytes32,bytes32)": EventFragment;
+    "WithdrawToken(address,address,uint256)": EventFragment;
   };
 
   getEvent(nameOrSignatureOrTopic: "Claimed"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "UpdateMerkleRoot"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "WithdrawToken"): EventFragment;
 }
 
 export class IMerkleDistributor extends BaseContract {
@@ -153,6 +157,24 @@ export class IMerkleDistributor extends BaseContract {
     ): TypedEventFilter<
       [BigNumber, string, BigNumber],
       { index: BigNumber; account: string; amount: BigNumber }
+    >;
+
+    UpdateMerkleRoot(
+      owner?: string | null,
+      previousRoot?: null,
+      newRoot?: null
+    ): TypedEventFilter<
+      [string, string, string],
+      { owner: string; previousRoot: string; newRoot: string }
+    >;
+
+    WithdrawToken(
+      owner?: string | null,
+      to?: string | null,
+      amount?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber],
+      { owner: string; to: string; amount: BigNumber }
     >;
   };
 

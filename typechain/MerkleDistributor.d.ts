@@ -21,17 +21,18 @@ import { TypedEventFilter, TypedEvent, TypedListener } from "./commons";
 
 interface MerkleDistributorInterface extends ethers.utils.Interface {
   functions: {
-    "c_0xd997e782(bytes32)": FunctionFragment;
     "claim(uint256,address,uint256,bytes32[])": FunctionFragment;
     "isClaimed(uint256)": FunctionFragment;
     "merkleRoot()": FunctionFragment;
+    "owner()": FunctionFragment;
+    "renounceOwnership()": FunctionFragment;
     "token()": FunctionFragment;
+    "transferOwnership(address)": FunctionFragment;
+    "updateMerkleRoot(bytes32)": FunctionFragment;
+    "withdrawAllTokens(address)": FunctionFragment;
+    "withdrawToken(address,uint256)": FunctionFragment;
   };
 
-  encodeFunctionData(
-    functionFragment: "c_0xd997e782",
-    values: [BytesLike]
-  ): string;
   encodeFunctionData(
     functionFragment: "claim",
     values: [BigNumberish, string, BigNumberish, BytesLike[]]
@@ -44,22 +45,66 @@ interface MerkleDistributorInterface extends ethers.utils.Interface {
     functionFragment: "merkleRoot",
     values?: undefined
   ): string;
+  encodeFunctionData(functionFragment: "owner", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "renounceOwnership",
+    values?: undefined
+  ): string;
   encodeFunctionData(functionFragment: "token", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "transferOwnership",
+    values: [string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "updateMerkleRoot",
+    values: [BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "withdrawAllTokens",
+    values: [string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "withdrawToken",
+    values: [string, BigNumberish]
+  ): string;
 
-  decodeFunctionResult(
-    functionFragment: "c_0xd997e782",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(functionFragment: "claim", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "isClaimed", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "merkleRoot", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "renounceOwnership",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "token", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "transferOwnership",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "updateMerkleRoot",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "withdrawAllTokens",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "withdrawToken",
+    data: BytesLike
+  ): Result;
 
   events: {
     "Claimed(uint256,address,uint256)": EventFragment;
+    "OwnershipTransferred(address,address)": EventFragment;
+    "UpdateMerkleRoot(address,bytes32,bytes32)": EventFragment;
+    "WithdrawToken(address,address,uint256)": EventFragment;
   };
 
   getEvent(nameOrSignatureOrTopic: "Claimed"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "UpdateMerkleRoot"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "WithdrawToken"): EventFragment;
 }
 
 export class MerkleDistributor extends BaseContract {
@@ -106,11 +151,6 @@ export class MerkleDistributor extends BaseContract {
   interface: MerkleDistributorInterface;
 
   functions: {
-    c_0xd997e782(
-      c__0xd997e782: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[void]>;
-
     claim(
       index: BigNumberish,
       account: string,
@@ -126,13 +166,35 @@ export class MerkleDistributor extends BaseContract {
 
     merkleRoot(overrides?: CallOverrides): Promise<[string]>;
 
-    token(overrides?: CallOverrides): Promise<[string]>;
-  };
+    owner(overrides?: CallOverrides): Promise<[string]>;
 
-  c_0xd997e782(
-    c__0xd997e782: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<void>;
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    token(overrides?: CallOverrides): Promise<[string]>;
+
+    transferOwnership(
+      newOwner: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    updateMerkleRoot(
+      newMerkleRoot: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    withdrawAllTokens(
+      to: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    withdrawToken(
+      to: string,
+      amount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+  };
 
   claim(
     index: BigNumberish,
@@ -146,14 +208,36 @@ export class MerkleDistributor extends BaseContract {
 
   merkleRoot(overrides?: CallOverrides): Promise<string>;
 
+  owner(overrides?: CallOverrides): Promise<string>;
+
+  renounceOwnership(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
   token(overrides?: CallOverrides): Promise<string>;
 
-  callStatic: {
-    c_0xd997e782(
-      c__0xd997e782: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>;
+  transferOwnership(
+    newOwner: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
 
+  updateMerkleRoot(
+    newMerkleRoot: BytesLike,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  withdrawAllTokens(
+    to: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  withdrawToken(
+    to: string,
+    amount: BigNumberish,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  callStatic: {
     claim(
       index: BigNumberish,
       account: string,
@@ -166,7 +250,29 @@ export class MerkleDistributor extends BaseContract {
 
     merkleRoot(overrides?: CallOverrides): Promise<string>;
 
+    owner(overrides?: CallOverrides): Promise<string>;
+
+    renounceOwnership(overrides?: CallOverrides): Promise<void>;
+
     token(overrides?: CallOverrides): Promise<string>;
+
+    transferOwnership(
+      newOwner: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    updateMerkleRoot(
+      newMerkleRoot: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    withdrawAllTokens(to: string, overrides?: CallOverrides): Promise<void>;
+
+    withdrawToken(
+      to: string,
+      amount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
   };
 
   filters: {
@@ -178,14 +284,35 @@ export class MerkleDistributor extends BaseContract {
       [BigNumber, string, BigNumber],
       { index: BigNumber; account: string; amount: BigNumber }
     >;
+
+    OwnershipTransferred(
+      previousOwner?: string | null,
+      newOwner?: string | null
+    ): TypedEventFilter<
+      [string, string],
+      { previousOwner: string; newOwner: string }
+    >;
+
+    UpdateMerkleRoot(
+      owner?: string | null,
+      previousRoot?: null,
+      newRoot?: null
+    ): TypedEventFilter<
+      [string, string, string],
+      { owner: string; previousRoot: string; newRoot: string }
+    >;
+
+    WithdrawToken(
+      owner?: string | null,
+      to?: string | null,
+      amount?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber],
+      { owner: string; to: string; amount: BigNumber }
+    >;
   };
 
   estimateGas: {
-    c_0xd997e782(
-      c__0xd997e782: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
     claim(
       index: BigNumberish,
       account: string,
@@ -201,15 +328,37 @@ export class MerkleDistributor extends BaseContract {
 
     merkleRoot(overrides?: CallOverrides): Promise<BigNumber>;
 
+    owner(overrides?: CallOverrides): Promise<BigNumber>;
+
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
     token(overrides?: CallOverrides): Promise<BigNumber>;
+
+    transferOwnership(
+      newOwner: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    updateMerkleRoot(
+      newMerkleRoot: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    withdrawAllTokens(
+      to: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    withdrawToken(
+      to: string,
+      amount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
   };
 
   populateTransaction: {
-    c_0xd997e782(
-      c__0xd997e782: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
     claim(
       index: BigNumberish,
       account: string,
@@ -225,6 +374,33 @@ export class MerkleDistributor extends BaseContract {
 
     merkleRoot(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
+    owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
     token(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    transferOwnership(
+      newOwner: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    updateMerkleRoot(
+      newMerkleRoot: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    withdrawAllTokens(
+      to: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    withdrawToken(
+      to: string,
+      amount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
   };
 }

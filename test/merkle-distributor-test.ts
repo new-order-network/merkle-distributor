@@ -1,7 +1,7 @@
 
 import chai, { expect } from 'chai'
 import { solidity, MockProvider, deployContract } from 'ethereum-waffle'
-import { Contract, BigNumber, constants } from 'ethers'
+import { Contract, Signer, BigNumber, constants } from 'ethers'
 import BalanceTree from '../src/balance-tree'
 import { parseBalanceMap } from '../src/parse-balance-map'
 import {ethers} from "hardhat";
@@ -27,31 +27,84 @@ describe('MerkleDistributor', () => {
   const [wallet0, wallet1] = wallets
 
   let token: Contract
+  let owner: Signer
+  let ownerAddress: string
+  let user: Signer
+  let userAddress: string
+  
   beforeEach('deploy token', async () => {
     let TestERC20 = await ethers.getContractFactory("TestERC20");
-    token = await TestERC20.deploy('Token', 'TKN', 0)
+    token = await TestERC20.deploy('Token', 'TKN', 0);
+    [owner, user] = await ethers.getSigners();
+    ownerAddress = await owner.getAddress();
+    userAddress = await owner.getAddress();
   })
 
   describe('#token', () => {
+
+    let distributor: Contract;
+
+    beforeEach(async () => {
+      distributor = await (
+        await ethers.getContractFactory("MerkleDistributor")
+      )
+      .deploy(token.address, ZERO_BYTES32, ownerAddress);
+    });
+
     it('returns the token address', async () => {
-      let Distributor = await ethers.getContractFactory("MerkleDistributor");
-      const distributor = await Distributor.deploy(token.address, ZERO_BYTES32)
       expect(await distributor.token()).to.eq(token.address)
-    })
+    });
+  
     it('creation: test correct setting of vanity information', async () => {
       const name = await token.name.call()
       expect(name).to.eq("Token")
   
       const symbol = await token.symbol.call()
       expect(symbol).to.eq("TKN")
-    })
+    });
+
     it('Assigns initial balance', async () => {
-      let Distributor = await ethers.getContractFactory("MerkleDistributor");
-      const distributor = await Distributor.deploy(token.address, ZERO_BYTES32)
       await token.setBalance(distributor.address, 1000)
       let tokenBal = await token.balanceOf(distributor.address)
       console.log(tokenBal)
         expect(parseInt(tokenBal)).to.equal(1000);
+    });
+
+    describe("Withdraw tokens by Owner", () => {
+      let distributorInitialBalance = 1000;
+      
+      beforeEach(async () => {
+        await token.setBalance(distributor.address, distributorInitialBalance);
+      });
+      
+      it("withdraws specified amounts of tokens to address", async () => {
+        await expect(distributor.connect(owner).withdrawToken(userAddress, 10))
+          .to.emit(distributor, "WithdrawToken")
+          .withArgs(ownerAddress, userAddress, 10);
+        expect(parseInt(await token.balanceOf(distributor.address)))
+          .to.equal(distributorInitialBalance - 10);
+        expect(parseInt(await token.balanceOf(userAddress))).to.equal(10);
+      });
+
+      it("withdraws all tokens to address", async () => {
+        await expect(distributor.connect(owner).withdrawAllTokens(userAddress))
+          .to.emit(distributor, "WithdrawToken")
+          .withArgs(ownerAddress, userAddress, distributorInitialBalance);
+        expect(parseInt(await token.balanceOf(distributor.address))).to.equal(0);
+        expect(parseInt(await token.balanceOf(userAddress))).to.equal(distributorInitialBalance);
+      });
+
+      context("inappropriate msg.sender", () => {
+        it("reverts when withdrawing set amount of tokens to address", async () => {
+          await expect(distributor.connect(user).withdrawToken(userAddress, 0))
+            .revertedWith("Ownable: caller is not the owner");
+        });
+        
+        it("reverts when withdrawing all tokens to address", async () => {
+          await expect(distributor.connect(user).withdrawAllTokens(userAddress))
+            .revertedWith("Ownable: caller is not the owner");
+        });
+      });
     });
 
     // it('Transfer adds amount to destination account', async () => {
@@ -62,18 +115,40 @@ describe('MerkleDistributor', () => {
   })
 
   describe('#merkleRoot', () => {
+    let distributor: Contract;
+    let randomBytes32 = ethers.utils.formatBytes32String("123");
+
+    beforeEach(async () => {
+      distributor = await (
+        await ethers.getContractFactory("MerkleDistributor")
+      ).deploy(token.address, ZERO_BYTES32, ownerAddress);
+    });
+
     it('returns the zero merkle root', async () => {
-      let Distributor = await ethers.getContractFactory("MerkleDistributor");
-      const distributor = await Distributor.deploy(token.address, ZERO_BYTES32)
-      //const distributor = await deployContract(wallet0, Distributor, [token.address, ZERO_BYTES32], overrides)
-      expect(await distributor.merkleRoot()).to.eq(ZERO_BYTES32)
-    })
+      expect(await distributor.merkleRoot()).to.eq(ZERO_BYTES32);
+    });
+
+    describe("Update merkle root", () => {
+      context("inappropriate msg.sender", () => {
+        it("reverts", async () => {
+          await expect(distributor.connect(user).updateMerkleRoot(randomBytes32))
+            .revertedWith("Ownable: caller is not the owner");
+        });
+      });
+
+      it("updates merkle root", async () => {
+        await expect(distributor.connect(owner).updateMerkleRoot(randomBytes32))
+          .to.emit(distributor, "UpdateMerkleRoot")
+          .withArgs(ownerAddress, ZERO_BYTES32, randomBytes32);
+        expect(await distributor.merkleRoot()).to.eq(randomBytes32);
+      });
+    });
   })
 
   describe('#claim', () => {
     it('fails for empty proof', async () => {
       let Distributor = await ethers.getContractFactory("MerkleDistributor");
-      const distributor = await Distributor.deploy(token.address, ZERO_BYTES32)
+      const distributor = await Distributor.deploy(token.address, ZERO_BYTES32, ownerAddress)
       //const distributor = await deployContract(wallet0, Distributor, [token.address, ZERO_BYTES32], overrides)
       await expect(distributor.claim(0, wallet0.address, 10, [])).to.be.revertedWith(
         'MerkleDistributor: Invalid proof.'
@@ -82,7 +157,7 @@ describe('MerkleDistributor', () => {
 
     it('fails for invalid index', async () => {
       let Distributor = await ethers.getContractFactory("MerkleDistributor");
-      const distributor = await Distributor.deploy(token.address, ZERO_BYTES32)
+      const distributor = await Distributor.deploy(token.address, ZERO_BYTES32, ownerAddress)
       //const distributor = await deployContract(wallet0, Distributor, [token.address, ZERO_BYTES32], overrides)
       await expect(distributor.claim(0, wallet0.address, 10, [])).to.be.revertedWith(
         'MerkleDistributor: Invalid proof.'
@@ -98,7 +173,7 @@ describe('MerkleDistributor', () => {
           { account: wallet1.address, amount: BigNumber.from(101) },
         ])
         let Distributor = await ethers.getContractFactory("MerkleDistributor");
-        distributor = await Distributor.deploy(token.address, tree.getHexRoot())
+        distributor = await Distributor.deploy(token.address, tree.getHexRoot(), ownerAddress)
         //distributor = await deployContract(wallet0, Distributor, [token.address, tree.getHexRoot()], overrides)
         await token.setBalance(distributor.address, 201)
       })
@@ -218,7 +293,7 @@ describe('MerkleDistributor', () => {
           })
         )
         let Distributor = await ethers.getContractFactory("MerkleDistributor");
-        distributor = await Distributor.deploy(token.address, tree.getHexRoot())
+        distributor = await Distributor.deploy(token.address, tree.getHexRoot(), ownerAddress)
         //distributor = await deployContract(wallet0, Distributor, [token.address, tree.getHexRoot()], overrides)
         await token.setBalance(distributor.address, 201)
       })
@@ -289,7 +364,7 @@ describe('MerkleDistributor', () => {
 
       beforeEach('deploy', async () => {
         let Distributor = await ethers.getContractFactory("MerkleDistributor");
-        distributor = await Distributor.deploy(token.address, tree.getHexRoot())
+        distributor = await Distributor.deploy(token.address, tree.getHexRoot(), ownerAddress)
         //distributor = await deployContract(wallet0, Distributor, [token.address, tree.getHexRoot()], overrides)
         await token.setBalance(distributor.address, constants.MaxUint256)
       })
@@ -363,7 +438,7 @@ describe('MerkleDistributor', () => {
       expect(tokenTotal).to.eq('0x02ee') // 750
       claims = innerClaims
       let Distributor = await ethers.getContractFactory("MerkleDistributor");
-      distributor = await Distributor.deploy(token.address, merkleRoot)
+      distributor = await Distributor.deploy(token.address, merkleRoot, ownerAddress)
       //distributor = await deployContract(wallet0, Distributor, [token.address, merkleRoot], overrides)
       await token.setBalance(distributor.address, tokenTotal)
     })
