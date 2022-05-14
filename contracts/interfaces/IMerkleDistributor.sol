@@ -16,7 +16,7 @@ interface IMerkleDistributor {
     ///
     /// @dev The assumption is that the updated amount values of MerkleTree are total eligible airdrops for user.
     /// So if the new amount is greater than the previous, the delta will be considered new eligible airdrop amount
-    /// when user claims. Conversely if the updated amount is less than previous, user will not be able to claim any more tokens.
+    /// when user claims. Conversely if the updated amount is less than previous (and it was already claimed) user will not be able to claim any more tokens.
     function updateMerkleRoot(bytes32 newMerkleRoot) external;
     /// Admin function. Withdraws token `to` provided address for the `amount`.
     function withdrawToken(address to, uint256 amount) external;
