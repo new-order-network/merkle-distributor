@@ -125,7 +125,7 @@ describe('MerkleDistributor', () => {
       expect(await distributor.merkleRoot()).to.eq(tree.getHexRoot());
     });
 
-    describe.only("Update merkle root", () => {
+    describe("Update merkle root", () => {
       let newTree: BalanceTree;
       let newAmount0 = 300;
       let newAmount1 = 51;
