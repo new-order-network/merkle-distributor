@@ -4,66 +4,79 @@ pragma solidity =0.8.4;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-//import "./MerkleProof.sol";
 import "./MerkleProof.sol";
 import "./interfaces/IMerkleDistributor.sol";
 
 contract MerkleDistributor is IMerkleDistributor, Ownable {
     address public immutable override token;
     bytes32 public override merkleRoot;
+    using SafeERC20 for IERC20;
 
-    // This is a packed array of booleans.
-    mapping(uint256 => uint256) private claimedBitMap;
+    /// inheritdoc IMerkleDistributor
+    mapping(uint256 => uint256) public override claimed;
 
-    constructor(address token_, bytes32 merkleRoot_, address owner_) {
+    constructor(
+        address token_,
+        bytes32 merkleRoot_,
+        address owner_
+    ) {
         token = token_;
         merkleRoot = merkleRoot_;
         transferOwnership(owner_);
     }
 
-    function isClaimed(uint256 index) public view override returns (bool) {
-        uint256 claimedWordIndex = index / 256;
-        uint256 claimedBitIndex = index % 256;
-        uint256 claimedWord = claimedBitMap[claimedWordIndex];
-        uint256 mask = (1 << claimedBitIndex);
-        return claimedWord & mask == mask;
-    }
-
-    function _setClaimed(uint256 index) private {
-        uint256 claimedWordIndex = index / 256;
-        uint256 claimedBitIndex = index % 256;
-        claimedBitMap[claimedWordIndex] = claimedBitMap[claimedWordIndex] | (1 << claimedBitIndex);
-    }
-
-    function claim(uint256 index, address account, uint256 amount, bytes32[] calldata merkleProof) external override {
-        require(!isClaimed(index), 'MerkleDistributor: Drop already claimed.');
+    /// inheritdoc IMerkleDistributor
+    function claim(
+        uint256 index,
+        address account,
+        uint256 amount,
+        bytes32[] calldata merkleProof
+    ) external override {
+        uint256 alreadyClaimed = claimed[index];
+        require(
+            amount > alreadyClaimed,
+            "MerkleDistributor: airdrop limit reached"
+        );
 
         // Verify the merkle proof.
         bytes32 node = keccak256(abi.encodePacked(index, account, amount));
-        require(MerkleProof.verify(merkleProof, merkleRoot, node), 'MerkleDistributor: Invalid proof.');
+        require(
+            MerkleProof.verify(merkleProof, merkleRoot, node),
+            "MerkleDistributor: Invalid proof."
+        );
 
         // Mark it claimed and send the token.
-        _setClaimed(index);
-        //require(IERC20(token).transfer(account, amount), 'MerkleDistributor: Transfer failed.');
-        SafeERC20.safeTransfer(IERC20(token), account, amount);
+        claimed[index] = amount;
+        uint256 airdropAmount = amount - alreadyClaimed;
+        IERC20(token).safeTransfer(account, airdropAmount);
 
-        emit Claimed(index, account, amount);
+        emit Claimed(index, account, airdropAmount);
     }
 
-    function updateMerkleRoot(bytes32 newMerkleRoot) onlyOwner public {
+    /// inheritdoc IMerkleDistributor
+    function updateMerkleRoot(bytes32 newMerkleRoot) public override onlyOwner {
         emit UpdateMerkleRoot(msg.sender, merkleRoot, newMerkleRoot);
         merkleRoot = newMerkleRoot;
     }
 
-    function withdrawToken(address to, uint amount) onlyOwner public {
+    /// inheritdoc IMerkleDistributor
+    function withdrawToken(address to, uint256 amount)
+        public
+        override
+        onlyOwner
+    {
         require(to != address(0), "to address is the zero address");
         require(amount > 0, "Amount is zero");
-        require(IERC20(token).balanceOf(address(this)) >= amount, "Amount exceeds balance");
-        SafeERC20.safeTransfer(IERC20(token), to, amount);
+        require(
+            IERC20(token).balanceOf(address(this)) >= amount,
+            "Amount exceeds balance"
+        );
+        IERC20(token).safeTransfer(to, amount);
         emit WithdrawToken(msg.sender, to, amount);
     }
 
-    function withdrawAllTokens(address to) onlyOwner public {
+    /// inheritdoc IMerkleDistributor
+    function withdrawAllTokens(address to) public override onlyOwner {
         withdrawToken(to, IERC20(token).balanceOf(address(this)));
     }
 }

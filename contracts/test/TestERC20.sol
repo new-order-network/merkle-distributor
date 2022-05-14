@@ -3,13 +3,10 @@ pragma solidity =0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-//import '../SafeERC20.sol';
 contract TestERC20 is ERC20 {
     // using Address for address;
-    using SafeERC20 for IERC20;
-    constructor (string memory name_, string memory symbol_, uint amountToMint) ERC20(name_, symbol_) public {
+    constructor (string memory name_, string memory symbol_, uint amountToMint) ERC20(name_, symbol_) {
         setBalance(msg.sender, amountToMint);
     }
 
