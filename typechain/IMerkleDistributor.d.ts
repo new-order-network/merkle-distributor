@@ -22,9 +22,12 @@ import { TypedEventFilter, TypedEvent, TypedListener } from "./commons";
 interface IMerkleDistributorInterface extends ethers.utils.Interface {
   functions: {
     "claim(uint256,address,uint256,bytes32[])": FunctionFragment;
-    "isClaimed(uint256)": FunctionFragment;
+    "claimed(uint256)": FunctionFragment;
     "merkleRoot()": FunctionFragment;
     "token()": FunctionFragment;
+    "updateMerkleRoot(bytes32)": FunctionFragment;
+    "withdrawAllTokens(address)": FunctionFragment;
+    "withdrawToken(address,uint256)": FunctionFragment;
   };
 
   encodeFunctionData(
@@ -32,7 +35,7 @@ interface IMerkleDistributorInterface extends ethers.utils.Interface {
     values: [BigNumberish, string, BigNumberish, BytesLike[]]
   ): string;
   encodeFunctionData(
-    functionFragment: "isClaimed",
+    functionFragment: "claimed",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
@@ -40,11 +43,35 @@ interface IMerkleDistributorInterface extends ethers.utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "token", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "updateMerkleRoot",
+    values: [BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "withdrawAllTokens",
+    values: [string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "withdrawToken",
+    values: [string, BigNumberish]
+  ): string;
 
   decodeFunctionResult(functionFragment: "claim", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "isClaimed", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "claimed", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "merkleRoot", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "token", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "updateMerkleRoot",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "withdrawAllTokens",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "withdrawToken",
+    data: BytesLike
+  ): Result;
 
   events: {
     "Claimed(uint256,address,uint256)": EventFragment;
@@ -109,14 +136,30 @@ export class IMerkleDistributor extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    isClaimed(
+    claimed(
       index: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<[boolean]>;
+    ): Promise<[BigNumber]>;
 
     merkleRoot(overrides?: CallOverrides): Promise<[string]>;
 
     token(overrides?: CallOverrides): Promise<[string]>;
+
+    updateMerkleRoot(
+      newMerkleRoot: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    withdrawAllTokens(
+      to: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    withdrawToken(
+      to: string,
+      amount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
   };
 
   claim(
@@ -127,11 +170,27 @@ export class IMerkleDistributor extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  isClaimed(index: BigNumberish, overrides?: CallOverrides): Promise<boolean>;
+  claimed(index: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>;
 
   merkleRoot(overrides?: CallOverrides): Promise<string>;
 
   token(overrides?: CallOverrides): Promise<string>;
+
+  updateMerkleRoot(
+    newMerkleRoot: BytesLike,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  withdrawAllTokens(
+    to: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  withdrawToken(
+    to: string,
+    amount: BigNumberish,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
 
   callStatic: {
     claim(
@@ -142,21 +201,34 @@ export class IMerkleDistributor extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
-    isClaimed(index: BigNumberish, overrides?: CallOverrides): Promise<boolean>;
+    claimed(index: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>;
 
     merkleRoot(overrides?: CallOverrides): Promise<string>;
 
     token(overrides?: CallOverrides): Promise<string>;
+
+    updateMerkleRoot(
+      newMerkleRoot: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    withdrawAllTokens(to: string, overrides?: CallOverrides): Promise<void>;
+
+    withdrawToken(
+      to: string,
+      amount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
   };
 
   filters: {
     Claimed(
       index?: null,
       account?: null,
-      amount?: null
+      airdropAmount?: null
     ): TypedEventFilter<
       [BigNumber, string, BigNumber],
-      { index: BigNumber; account: string; amount: BigNumber }
+      { index: BigNumber; account: string; airdropAmount: BigNumber }
     >;
 
     UpdateMerkleRoot(
@@ -187,14 +259,27 @@ export class IMerkleDistributor extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    isClaimed(
-      index: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    claimed(index: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>;
 
     merkleRoot(overrides?: CallOverrides): Promise<BigNumber>;
 
     token(overrides?: CallOverrides): Promise<BigNumber>;
+
+    updateMerkleRoot(
+      newMerkleRoot: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    withdrawAllTokens(
+      to: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    withdrawToken(
+      to: string,
+      amount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
   };
 
   populateTransaction: {
@@ -206,7 +291,7 @@ export class IMerkleDistributor extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    isClaimed(
+    claimed(
       index: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
@@ -214,5 +299,21 @@ export class IMerkleDistributor extends BaseContract {
     merkleRoot(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     token(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    updateMerkleRoot(
+      newMerkleRoot: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    withdrawAllTokens(
+      to: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    withdrawToken(
+      to: string,
+      amount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
   };
 }

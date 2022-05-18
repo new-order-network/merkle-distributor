@@ -106,41 +106,96 @@ describe('MerkleDistributor', () => {
         });
       });
     });
-
-    // it('Transfer adds amount to destination account', async () => {
-    //     await token.transfer(walletTo, 7);
-    //     let tokenBal = await token.balanceOf(walletTo)
-    //     expect(parseInt(tokenBal)).to.equal(7);
-    // });
   })
 
   describe('#merkleRoot', () => {
     let distributor: Contract;
-    let randomBytes32 = ethers.utils.formatBytes32String("123");
+    let tree: BalanceTree;
+    beforeEach('deploy', async () => {
+      tree = new BalanceTree([
+        { account: wallet0.address, amount: BigNumber.from(100) },
+        { account: wallet1.address, amount: BigNumber.from(101) },
+      ]);
+      let Distributor = await ethers.getContractFactory("MerkleDistributor");
+      distributor = await Distributor.deploy(token.address, tree.getHexRoot(), ownerAddress);
+      await token.setBalance(distributor.address, 201);
+    })
 
-    beforeEach(async () => {
-      distributor = await (
-        await ethers.getContractFactory("MerkleDistributor")
-      ).deploy(token.address, ZERO_BYTES32, ownerAddress);
-    });
-
-    it('returns the zero merkle root', async () => {
-      expect(await distributor.merkleRoot()).to.eq(ZERO_BYTES32);
+    it('returns the merkle root of the MerkleTree', async () => {
+      expect(await distributor.merkleRoot()).to.eq(tree.getHexRoot());
     });
 
     describe("Update merkle root", () => {
-      context("inappropriate msg.sender", () => {
-        it("reverts", async () => {
-          await expect(distributor.connect(user).updateMerkleRoot(randomBytes32))
+      let newTree: BalanceTree;
+      let newAmount0 = 300;
+      let newAmount1 = 51;
+
+      beforeEach(async () => {
+        newTree = new BalanceTree([
+          { account: wallet0.address, amount: BigNumber.from(newAmount0) },
+          { account: wallet1.address, amount: BigNumber.from(newAmount1) },
+        ]);
+        await token.setBalance(distributor.address, newAmount0 + newAmount1);
+      });
+
+      context("with invalid request or params", () => {
+        it("reverts when non-owner msg.sener attempts to update merkle root", async () => {
+          await expect(distributor.connect(user).updateMerkleRoot(newTree.getHexRoot()))
             .revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("reverts when claiming again with new amount less than previous amount in merkle tree", async () => {
+          const proof = tree.getProof(1, wallet1.address, BigNumber.from(101));
+          await distributor.claim(1, wallet1.address, 101, proof, overrides);
+          const newProof = newTree.getProof(1, wallet1.address, BigNumber.from(newAmount1));
+          await expect(distributor.claim(1, wallet1.address, newAmount1, newProof, overrides))
+            .revertedWith("MerkleDistributor: airdrop limit reached");
         });
       });
 
       it("updates merkle root", async () => {
-        await expect(distributor.connect(owner).updateMerkleRoot(randomBytes32))
+        await expect(distributor.connect(owner).updateMerkleRoot(newTree.getHexRoot()))
           .to.emit(distributor, "UpdateMerkleRoot")
-          .withArgs(ownerAddress, ZERO_BYTES32, randomBytes32);
-        expect(await distributor.merkleRoot()).to.eq(randomBytes32);
+          .withArgs(ownerAddress, tree.getHexRoot(), newTree.getHexRoot());
+        expect(await distributor.merkleRoot()).to.eq(newTree.getHexRoot());
+      });
+
+      it("claims with new merkle root: 0", async ()=> {
+        await distributor.connect(owner).updateMerkleRoot(newTree.getHexRoot());
+        const proof = newTree.getProof(0, wallet0.address, BigNumber.from(newAmount0));
+        await expect(
+          distributor.claim(0, wallet0.address, newAmount0, proof, overrides)
+        )
+          .emit(distributor, "Claimed")
+          .withArgs(0, wallet0.address, BigNumber.from(newAmount0));
+      });
+      
+      it("claims with new merkle root: 1", async ()=> {
+        await distributor.connect(owner).updateMerkleRoot(newTree.getHexRoot());
+        const proof = newTree.getProof(1, wallet1.address, BigNumber.from(newAmount1));
+        await expect(
+          distributor.claim(1, wallet1.address, newAmount1, proof, overrides)
+        )
+          .emit(distributor, "Claimed")
+          .withArgs(1, wallet1.address, BigNumber.from(newAmount1));
+      });
+      
+      it("claims again after updating merkle root: 0", async ()=> {
+        const proof = tree.getProof(0, wallet0.address, BigNumber.from(100));
+        await expect(
+          distributor.claim(0, wallet0.address, 100, proof, overrides)
+        )
+          .emit(distributor, "Claimed")
+          .withArgs(0, wallet0.address, BigNumber.from(100));
+        expect(await token.balanceOf(wallet0.address)).to.equal(BigNumber.from(100));
+        await distributor.connect(owner).updateMerkleRoot(newTree.getHexRoot());
+        const newProof = newTree.getProof(0, wallet0.address, BigNumber.from(newAmount0));
+        await expect(
+          distributor.claim(0, wallet0.address, newAmount0, newProof, overrides)
+        )
+          .emit(distributor, "Claimed")
+          .withArgs(0, wallet0.address, BigNumber.from(200));
+        expect(await token.balanceOf(wallet0.address)).to.equal(BigNumber.from(newAmount0));
       });
     });
   })
@@ -203,24 +258,24 @@ describe('MerkleDistributor', () => {
         )
       })
 
-      it('sets #isClaimed', async () => {
+      it('sets #claimed', async () => {
         const proof0 = tree.getProof(0, wallet0.address, BigNumber.from(100))
-        expect(await distributor.isClaimed(0)).to.eq(false)
-        expect(await distributor.isClaimed(1)).to.eq(false)
+        expect(await distributor.claimed(0)).to.eq(0)
+        expect(await distributor.claimed(1)).to.eq(0)
         await distributor.claim(0, wallet0.address, 100, proof0, overrides)
-        expect(await distributor.isClaimed(0)).to.eq(true)
-        expect(await distributor.isClaimed(1)).to.eq(false)
+        expect(await distributor.claimed(0)).to.eq(100)
+        expect(await distributor.claimed(1)).to.eq(0)
       })
 
       it('cannot allow two claims', async () => {
         const proof0 = tree.getProof(0, wallet0.address, BigNumber.from(100))
         await distributor.claim(0, wallet0.address, 100, proof0, overrides)
         await expect(distributor.claim(0, wallet0.address, 100, proof0, overrides)).to.be.revertedWith(
-          'MerkleDistributor: Drop already claimed.'
+          'MerkleDistributor: airdrop limit reached'
         )
       })
 
-      it('cannot claim more than once: 0 and then 1', async () => {
+      it('cannot claim more than allowed: 0 and 1', async () => {
         await distributor.claim(
           0,
           wallet0.address,
@@ -238,10 +293,10 @@ describe('MerkleDistributor', () => {
 
         await expect(
           distributor.claim(0, wallet0.address, 100, tree.getProof(0, wallet0.address, BigNumber.from(100)), overrides)
-        ).to.be.revertedWith('MerkleDistributor: Drop already claimed.')
+        ).to.be.revertedWith('MerkleDistributor: airdrop limit reached')
       })
 
-      it('cannot claim more than once: 1 and then 0', async () => {
+      it('cannot claim more than allowed: 1 and then 0', async () => {
         await distributor.claim(
           1,
           wallet1.address,
@@ -259,7 +314,7 @@ describe('MerkleDistributor', () => {
 
         await expect(
           distributor.claim(1, wallet1.address, 101, tree.getProof(1, wallet1.address, BigNumber.from(101)), overrides)
-        ).to.be.revertedWith('MerkleDistributor: Drop already claimed.')
+        ).to.be.revertedWith('MerkleDistributor: airdrop limit reached')
       })
 
       it('cannot claim for address other than proof', async () => {
@@ -414,7 +469,7 @@ describe('MerkleDistributor', () => {
           const proof = tree.getProof(i, wallet0.address, BigNumber.from(100))
           await distributor.claim(i, wallet0.address, 100, proof, overrides)
           await expect(distributor.claim(i, wallet0.address, 100, proof, overrides)).to.be.revertedWith(
-            'MerkleDistributor: Drop already claimed.'
+            'MerkleDistributor: airdrop limit reached'
           )
         }
       })
@@ -476,7 +531,7 @@ describe('MerkleDistributor', () => {
           .to.emit(distributor, 'Claimed')
           .withArgs(claim.index, account, claim.amount)
         await expect(distributor.claim(claim.index, account, claim.amount, claim.proof, overrides)).to.be.revertedWith(
-          'MerkleDistributor: Drop already claimed.'
+          'MerkleDistributor: airdrop limit reached'
         )
       }
       expect(await token.balanceOf(distributor.address)).to.eq(0)

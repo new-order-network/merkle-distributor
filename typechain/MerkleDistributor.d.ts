@@ -22,7 +22,7 @@ import { TypedEventFilter, TypedEvent, TypedListener } from "./commons";
 interface MerkleDistributorInterface extends ethers.utils.Interface {
   functions: {
     "claim(uint256,address,uint256,bytes32[])": FunctionFragment;
-    "isClaimed(uint256)": FunctionFragment;
+    "claimed(uint256)": FunctionFragment;
     "merkleRoot()": FunctionFragment;
     "owner()": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
@@ -38,7 +38,7 @@ interface MerkleDistributorInterface extends ethers.utils.Interface {
     values: [BigNumberish, string, BigNumberish, BytesLike[]]
   ): string;
   encodeFunctionData(
-    functionFragment: "isClaimed",
+    functionFragment: "claimed",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
@@ -69,7 +69,7 @@ interface MerkleDistributorInterface extends ethers.utils.Interface {
   ): string;
 
   decodeFunctionResult(functionFragment: "claim", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "isClaimed", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "claimed", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "merkleRoot", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(
@@ -159,10 +159,10 @@ export class MerkleDistributor extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    isClaimed(
-      index: BigNumberish,
+    claimed(
+      arg0: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<[boolean]>;
+    ): Promise<[BigNumber]>;
 
     merkleRoot(overrides?: CallOverrides): Promise<[string]>;
 
@@ -204,7 +204,7 @@ export class MerkleDistributor extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  isClaimed(index: BigNumberish, overrides?: CallOverrides): Promise<boolean>;
+  claimed(arg0: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>;
 
   merkleRoot(overrides?: CallOverrides): Promise<string>;
 
@@ -246,7 +246,7 @@ export class MerkleDistributor extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
-    isClaimed(index: BigNumberish, overrides?: CallOverrides): Promise<boolean>;
+    claimed(arg0: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>;
 
     merkleRoot(overrides?: CallOverrides): Promise<string>;
 
@@ -279,10 +279,10 @@ export class MerkleDistributor extends BaseContract {
     Claimed(
       index?: null,
       account?: null,
-      amount?: null
+      airdropAmount?: null
     ): TypedEventFilter<
       [BigNumber, string, BigNumber],
-      { index: BigNumber; account: string; amount: BigNumber }
+      { index: BigNumber; account: string; airdropAmount: BigNumber }
     >;
 
     OwnershipTransferred(
@@ -321,10 +321,7 @@ export class MerkleDistributor extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    isClaimed(
-      index: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    claimed(arg0: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>;
 
     merkleRoot(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -367,8 +364,8 @@ export class MerkleDistributor extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    isClaimed(
-      index: BigNumberish,
+    claimed(
+      arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
