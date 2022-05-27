@@ -1,16 +1,19 @@
 # Updateable @uniswap/merkle-distributor with SafeERC & test coverage
-Forked from https://github.com/Uniswap/merkle-distributor
 
+Originally forked from https://github.com/Uniswap/merkle-distributor
 
-Added SafeERC capabilities for non-standard tokens
-Added full test coverage / reports
+Then we:
+* Added SafeERC capabilities for non-standard tokens
+* Added full test coverage / reports
 
-*Update:* Added Ownable, and the ability of the owner to:
+*NEW Update:* Added Ownable, and the ability of the Owner to:
 * Withdraw tokens
 * Update the Merkle Root
 
- :exclamation:  Addresses can only claim one time even if they are airdropped more tokens by updating the merkle root   |
-|-----------------------------------------|
+If the Merkle Root is updated to assign additional airdropped tokens to a particular address that address will be able to claim an amount of tokens equal to the new allocation *minus* the number of tokens previously claimed. 
+
+It's assumed *Owner* knows what they are doing and is trustable as well - likely a multisig.
+
 ## Installation:
 ### Hardhat
 ```bash
