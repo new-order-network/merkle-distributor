@@ -4,16 +4,17 @@ pragma solidity =0.8.4;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "./MerkleProof.sol";
 import "./interfaces/IMerkleDistributor.sol";
 
-contract MerkleDistributor is IMerkleDistributor, Ownable {
+contract MerkleDistributor is IMerkleDistributor, Ownable, Pausable {
     address public immutable override token;
     bytes32 public override merkleRoot;
     using SafeERC20 for IERC20;
 
     /// inheritdoc IMerkleDistributor
-    mapping(uint256 => uint256) public override claimed;
+    mapping(address => uint256) public override claimed;
 
     constructor(
         address token_,
@@ -31,8 +32,8 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
         address account,
         uint256 amount,
         bytes32[] calldata merkleProof
-    ) external override {
-        uint256 alreadyClaimed = claimed[index];
+    ) external override whenNotPaused{
+        uint256 alreadyClaimed = claimed[account];
         require(
             amount > alreadyClaimed,
             "MerkleDistributor: airdrop limit reached"
@@ -46,7 +47,7 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
         );
 
         // Mark it claimed and send the token.
-        claimed[index] = amount;
+        claimed[account] = amount;
         uint256 airdropAmount = amount - alreadyClaimed;
         IERC20(token).safeTransfer(account, airdropAmount);
 
